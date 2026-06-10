@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Thumbnail OSC Browser</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <h1>Video Thumbnail OSC Browser</h1>
+        <p>Choose a folder on the server, hover to preview, click to send OSC.</p>
+      </header>
+
+      <section class="controls">
+        <label>
+          Video folder path (server):
+          <div class="path-picker-row">
+            <input id="folderPath" type="text" placeholder="/path/to/videos" />
+            <button id="browseBtn" type="button" class="secondary">Browse</button>
+          </div>
+        </label>
+        <label>
+          OSC IP:
+          <input id="oscIp" type="text" placeholder="192.168.1.10" />
+        </label>
+        <label>
+          OSC Port:
+          <input id="oscPort" type="number" placeholder="8000" />
+        </label>
+        <label>
+          OSC Address:
+          <input id="oscAddress" type="text" value="/d3/videoselect" />
+        </label>
+        <label class="check-row">
+          <input id="recursiveScan" type="checkbox" />
+          Scan subfolders recursively
+        </label>
+        <button id="loadBtn" type="button">Load Videos</button>
+      </section>
+
+      <section id="browserPanel" class="browser-panel hidden" aria-live="polite">
+        <div class="browser-head">
+          <strong id="browserCurrentPath">/</strong>
+          <div class="browser-actions">
+            <button id="browserUpBtn" type="button" class="secondary">Up</button>
+            <button id="selectCurrentBtn" type="button" class="secondary">Use This Folder</button>
+            <button id="closeBrowserBtn" type="button" class="secondary">Close</button>
+          </div>
+        </div>
+        <div id="browserList" class="browser-list"></div>
+      </section>
+
+      <p id="status" class="status"></p>
+
+      <section id="grid" class="grid"></section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

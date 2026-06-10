@@ -13,6 +13,10 @@ const HOST = process.env.HOST || "0.0.0.0";
 const PREVIEW_DIR = path.join(__dirname, "previews");
 const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi"]);
 
+function isIgnoredFile(fileName) {
+  return fileName.startsWith("._") || fileName === ".DS_Store";
+}
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/previews", express.static(PREVIEW_DIR));
@@ -54,7 +58,7 @@ app.get("/api/browse", async (req, res) => {
 });
 
 function isVideoFile(fileName) {
-  return VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase());
+  return !isIgnoredFile(fileName) && VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase());
 }
 
 function safeHash(input) {
@@ -125,8 +129,8 @@ async function ensurePreviewArtifacts(videoPath, stats) {
   if (!thumbExists) {
     await runFfmpeg([
       "-y",
-      "-ss",
-      "00:00:01",
+      "-fflags",
+      "+genpts",
       "-i",
       videoPath,
       "-frames:v",
@@ -140,12 +144,13 @@ async function ensurePreviewArtifacts(videoPath, stats) {
   if (!gifExists) {
     await runFfmpeg([
       "-y",
-      "-ss",
-      "00:00:01",
+      "-fflags",
+      "+genpts",
       "-i",
       videoPath,
       "-t",
       "2.5",
+      "-an",
       "-vf",
       "fps=10,scale=320:-1:flags=lanczos",
       gifPath,
@@ -175,11 +180,24 @@ app.post("/api/videos", async (req, res) => {
       ? await findVideosRecursive(folderPath)
       : await findVideos(folderPath);
     const payload = [];
+    let previewFailedCount = 0;
 
     for (let index = 0; index < videos.length; index += 1) {
       const videoPath = videos[index];
-      const videoStats = await fs.stat(videoPath);
-      const previews = await ensurePreviewArtifacts(videoPath, videoStats);
+      let previews = { thumbUrl: null, gifUrl: null, previewError: null };
+      let processingError = null;
+      try {
+        const videoStats = await fs.stat(videoPath);
+        previews = await ensurePreviewArtifacts(videoPath, videoStats);
+      } catch (previewError) {
+        previewFailedCount += 1;
+        processingError = previewError;
+        previews = {
+          thumbUrl: null,
+          gifUrl: null,
+          previewError: previewError.message || "Preview generation failed",
+        };
+      }
 
       payload.push({
         index,
@@ -187,10 +205,17 @@ app.post("/api/videos", async (req, res) => {
         fullPath: videoPath,
         thumbUrl: previews.thumbUrl,
         gifUrl: previews.gifUrl,
+        previewError: previews.previewError,
+        isBroken: Boolean(processingError),
       });
     }
 
-    return res.json({ count: payload.length, recursive, videos: payload });
+    return res.json({
+      count: payload.length,
+      recursive,
+      previewFailedCount,
+      videos: payload,
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message || "Unknown error" });
   }
