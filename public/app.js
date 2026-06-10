@@ -14,6 +14,8 @@ const loadBtn = document.getElementById("loadBtn");
 const statusEl = document.getElementById("status");
 const gridEl = document.getElementById("grid");
 
+const STORAGE_KEY = "thumbnailServer.uiState.v1";
+
 const PLACEHOLDER_PREVIEW =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -26,6 +28,50 @@ let browseState = {
   canGoUp: false,
   directories: [],
 };
+
+function saveUiState() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        folderPath: folderInput.value,
+        oscIp: ipInput.value,
+        oscPort: portInput.value,
+        oscAddress: addressInput.value,
+        recursiveScan: recursiveInput.checked,
+      }),
+    );
+  } catch (error) {
+    // Ignore storage issues to keep the UI functional in restricted browsers.
+  }
+}
+
+function restoreUiState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+    const state = JSON.parse(raw);
+    if (typeof state.folderPath === "string") {
+      folderInput.value = state.folderPath;
+    }
+    if (typeof state.oscIp === "string") {
+      ipInput.value = state.oscIp;
+    }
+    if (typeof state.oscPort === "string") {
+      portInput.value = state.oscPort;
+    }
+    if (typeof state.oscAddress === "string") {
+      addressInput.value = state.oscAddress;
+    }
+    if (typeof state.recursiveScan === "boolean") {
+      recursiveInput.checked = state.recursiveScan;
+    }
+  } catch (error) {
+    // Ignore malformed stored data.
+  }
+}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -188,6 +234,11 @@ loadBtn.addEventListener("click", loadVideos);
 browseBtn.addEventListener("click", openBrowser);
 closeBrowserBtn.addEventListener("click", closeBrowser);
 
+[folderInput, ipInput, portInput, addressInput].forEach((input) => {
+  input.addEventListener("input", saveUiState);
+});
+recursiveInput.addEventListener("change", saveUiState);
+
 browserUpBtn.addEventListener("click", () => {
   if (browseState.canGoUp) {
     browsePath(browseState.parentPath);
@@ -196,6 +247,9 @@ browserUpBtn.addEventListener("click", () => {
 
 selectCurrentBtn.addEventListener("click", () => {
   folderInput.value = browseState.currentPath;
+  saveUiState();
   closeBrowser();
   setStatus(`Selected folder: ${browseState.currentPath}`);
 });
+
+restoreUiState();
