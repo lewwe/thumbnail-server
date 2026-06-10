@@ -262,7 +262,10 @@ app.post("/api/send-osc", async (req, res) => {
 async function start() {
   await fs.mkdir(PREVIEW_DIR, { recursive: true });
   app.listen(PORT, HOST, () => {
-    console.log(`Thumbnail server running on http://${HOST}:${PORT}`);
+    const localUiUrl = `http://localhost:${PORT}`;
+    const boundUrl = `http://${HOST}:${PORT}`;
+    console.log(`Thumbnail server listening on ${boundUrl}`);
+    console.log(`Open UI: ${localUiUrl}`);
   });
 }
 
