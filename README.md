@@ -42,8 +42,8 @@ What it does:
 
 - Verifies macOS arm64.
 - Installs Homebrew if missing.
-- Installs `git`, `node`, and `ffmpeg`.
-- Downloads this app into `~/Applications/thumbnail-server`.
+- Installs `node` and `ffmpeg`.
+- Writes the full app locally into `~/Applications/thumbnail-server` from inside the installer script itself.
 - Installs npm dependencies.
 - Starts the server.
 
@@ -51,6 +51,18 @@ Optional environment overrides:
 
 ```bash
 PORT=3100 HOST=0.0.0.0 INSTALL_DIR="$HOME/Applications/thumbnail-server" curl -fsSL https://raw.githubusercontent.com/lewwe/thumbnail-server/main/install-macos-arm64.sh | bash
+```
+
+Optional repo overrides:
+
+```bash
+REPO_GIT_URL="https://github.com/lewwe/thumbnail-server.git" REPO_BRANCH="main" curl -fsSL https://raw.githubusercontent.com/lewwe/thumbnail-server/main/install-macos-arm64.sh | bash
+```
+
+Alternative script with the same embedded app payload:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lewwe/thumbnail-server/main/install-macos-arm64-selfcontained.sh | bash
 ```
 
 ## Notes

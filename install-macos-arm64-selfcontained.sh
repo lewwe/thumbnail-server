@@ -40,17 +40,17 @@ install_homebrew_if_missing() {
 }
 
 ensure_tools() {
-  log "Installing required tools (git, node, ffmpeg)..."
+  log "Installing required tools (node, ffmpeg)..."
   brew update
-  brew install git node ffmpeg
+  brew install node ffmpeg
 }
 
-write_embedded_project() {
+write_app_files() {
   log "Installing into: $INSTALL_DIR"
   rm -rf "$INSTALL_DIR"
   mkdir -p "$INSTALL_DIR/public" "$INSTALL_DIR/previews"
 
-  cat >"$INSTALL_DIR/package.json" <<'EOF_PACKAGE'
+  cat >"$INSTALL_DIR/package.json" <<'EOF'
 {
   "name": "thumbnail-server",
   "version": "1.0.0",
@@ -65,9 +65,9 @@ write_embedded_project() {
     "osc": "^2.4.5"
   }
 }
-EOF_PACKAGE
+EOF
 
-  cat >"$INSTALL_DIR/server.js" <<'EOF_SERVER'
+  cat >"$INSTALL_DIR/server.js" <<'EOF'
 const express = require("express");
 const fs = require("fs/promises");
 const path = require("path");
@@ -315,9 +315,9 @@ start().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-EOF_SERVER
+EOF
 
-  cat >"$INSTALL_DIR/public/index.html" <<'EOF_INDEX'
+  cat >"$INSTALL_DIR/public/index.html" <<'EOF'
 <!doctype html>
 <html lang="en">
   <head>
@@ -380,9 +380,9 @@ EOF_SERVER
     <script src="app.js"></script>
   </body>
 </html>
-EOF_INDEX
+EOF
 
-  cat >"$INSTALL_DIR/public/app.js" <<'EOF_APP'
+  cat >"$INSTALL_DIR/public/app.js" <<'EOF'
 const folderInput = document.getElementById("folderPath");
 const ipInput = document.getElementById("oscIp");
 const portInput = document.getElementById("oscPort");
@@ -565,9 +565,9 @@ selectCurrentBtn.addEventListener("click", () => {
   closeBrowser();
   setStatus(`Selected folder: ${browseState.currentPath}`);
 });
-EOF_APP
+EOF
 
-  cat >"$INSTALL_DIR/public/styles.css" <<'EOF_STYLE'
+  cat >"$INSTALL_DIR/public/styles.css" <<'EOF'
 :root {
   --bg: #f0efe9;
   --panel: #ffffff;
@@ -802,7 +802,7 @@ button:hover {
     padding: 1rem;
   }
 }
-EOF_STYLE
+EOF
 }
 
 install_node_deps() {
@@ -836,12 +836,12 @@ main() {
   require_macos_arm64
   install_homebrew_if_missing
   ensure_tools
-  write_embedded_project
+  write_app_files
   install_node_deps
   write_run_script
 
   log "Install complete."
-  log "Server folder browser sees folders on this Mac."
+  log "This installer is self-contained and does not download app source from GitHub."
   start_server
 }
 
