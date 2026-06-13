@@ -79,6 +79,13 @@ function getVersionedVideoInfo(videoPath) {
   };
 }
 
+function getBaseFileName(fileName) {
+  const ext = path.extname(fileName);
+  const stem = fileName.slice(0, fileName.length - ext.length);
+  const match = stem.match(/^(.*)_v(\d+)$/i);
+  return match ? match[1] + ext : fileName;
+}
+
 function keepLatestVersionedVideos(videoPaths) {
   const selected = new Map();
 
@@ -328,11 +335,16 @@ app.post("/api/videos", async (req, res) => {
           fileExists(artifacts.gifPath),
         ]);
 
+        const relPath = path.relative(folderPath, videoPath).split(path.sep).join("/");
+        const relDir = path.dirname(relPath);
+        const baseFileName = getBaseFileName(path.basename(videoPath));
+        const baseRelativePath = relDir === "." ? baseFileName : `${relDir}/${baseFileName}`;
         return {
           index,
           fileName: path.basename(videoPath),
           fullPath: videoPath,
-          relativePath: path.relative(folderPath, videoPath).split(path.sep).join("/"),
+          relativePath: relPath,
+          baseRelativePath,
           thumbUrl: thumbReady ? artifacts.thumbUrl : null,
           gifUrl: gifReady ? artifacts.gifUrl : null,
           previewError: null,
@@ -341,11 +353,16 @@ app.post("/api/videos", async (req, res) => {
           gifReady,
         };
       } catch (metadataError) {
+        const errRelPath = path.relative(folderPath, videoPath).split(path.sep).join("/");
+        const errRelDir = path.dirname(errRelPath);
+        const errBaseFileName = getBaseFileName(path.basename(videoPath));
+        const errBaseRelativePath = errRelDir === "." ? errBaseFileName : `${errRelDir}/${errBaseFileName}`;
         return {
           index,
           fileName: path.basename(videoPath),
           fullPath: videoPath,
-          relativePath: path.relative(folderPath, videoPath).split(path.sep).join("/"),
+          relativePath: errRelPath,
+          baseRelativePath: errBaseRelativePath,
           thumbUrl: null,
           gifUrl: null,
           previewError: metadataError.message || "Failed to read video metadata",

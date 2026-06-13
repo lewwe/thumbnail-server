@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-label="Three instance browser layout suggestion">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4f6fb"/>
+      <stop offset="100%" stop-color="#e9eef7"/>
+    </linearGradient>
+    <linearGradient id="panelTop" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#274b7a"/>
+      <stop offset="100%" stop-color="#37659c"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#12365e"/>
+      <stop offset="100%" stop-color="#1f4f83"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#324763" flood-opacity="0.22"/>
+    </filter>
+    <style>
+      .title { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 34px; font-weight: 700; fill: #10253f; }
+      .subtitle { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 17px; fill: #2a425f; }
+      .panelTitle { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 19px; font-weight: 700; fill: #f4f8ff; }
+      .meta { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 13px; fill: #8ea4bf; }
+      .control { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 12px; fill: #486482; }
+      .chipText { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 11px; font-weight: 600; fill: #36577d; }
+      .thumbText { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 10px; fill: #f2f6ff; }
+      .caption { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 14px; fill: #2b4562; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1600" height="126" fill="url(#hero)"/>
+  <text x="64" y="58" class="title" fill="#f5f9ff">Three-Instance Operator Layout</text>
+  <text x="64" y="92" class="subtitle" fill="#c9d9ee">Suggestion: fixed 3-column dashboard, shared status strip, compact controls, and denser media cards.</text>
+
+  <rect x="64" y="148" width="1472" height="44" rx="12" fill="#ffffff" stroke="#d0dbe8"/>
+  <rect x="84" y="160" width="140" height="22" rx="11" fill="#e8f1ff"/>
+  <text x="118" y="176" class="chipText">LIVE</text>
+  <rect x="238" y="160" width="252" height="22" rx="11" fill="#eef4fb"/>
+  <text x="252" y="176" class="control">Shared OSC target: 10.0.0.15:8000</text>
+  <rect x="508" y="160" width="282" height="22" rx="11" fill="#eef4fb"/>
+  <text x="522" y="176" class="control">Address template: /scene/{instance}/clip</text>
+  <rect x="808" y="160" width="210" height="22" rx="11" fill="#eef4fb"/>
+  <text x="822" y="176" class="control">Preview mode: lazy + hover</text>
+
+  <g transform="translate(64,216)" filter="url(#shadow)">
+    <rect width="468" height="700" rx="16" fill="#ffffff"/>
+    <rect width="468" height="66" rx="16" fill="url(#panelTop)"/>
+    <text x="20" y="40" class="panelTitle">Instance A</text>
+    <text x="352" y="40" class="meta">Camera feed</text>
+
+    <rect x="20" y="84" width="428" height="56" rx="10" fill="#f4f8fd" stroke="#d9e3ef"/>
+    <rect x="30" y="96" width="180" height="14" rx="7" fill="#dce8f8"/>
+    <rect x="30" y="118" width="120" height="12" rx="6" fill="#dce8f8"/>
+    <rect x="334" y="96" width="104" height="32" rx="8" fill="#e8f1ff"/>
+    <text x="351" y="116" class="control">Refresh</text>
+
+    <g transform="translate(20,156)">
+      <rect x="0" y="0" width="132" height="100" rx="9" fill="#304d74"/>
+      <rect x="148" y="0" width="132" height="100" rx="9" fill="#3b5f8d"/>
+      <rect x="296" y="0" width="132" height="100" rx="9" fill="#27456b"/>
+      <text x="16" y="90" class="thumbText">#12 opening.mov</text>
+      <text x="164" y="90" class="thumbText">#13 logo_loop.mov</text>
+      <text x="312" y="90" class="thumbText">#14 intro_v5.mov</text>
+
+      <rect x="0" y="118" width="132" height="100" rx="9" fill="#3e6496"/>
+      <rect x="148" y="118" width="132" height="100" rx="9" fill="#2d4f79"/>
+      <rect x="296" y="118" width="132" height="100" rx="9" fill="#496f9f"/>
+      <text x="16" y="208" class="thumbText">#15 particles.mov</text>
+      <text x="164" y="208" class="thumbText">#16 glow_v2.mov</text>
+      <text x="312" y="208" class="thumbText">#17 title.mov</text>
+
+      <rect x="0" y="236" width="132" height="100" rx="9" fill="#27517d"/>
+      <rect x="148" y="236" width="132" height="100" rx="9" fill="#3d6798"/>
+      <rect x="296" y="236" width="132" height="100" rx="9" fill="#234363"/>
+      <text x="16" y="326" class="thumbText">#18 fx_cloud.mov</text>
+      <text x="164" y="326" class="thumbText">#19 plates.mov</text>
+      <text x="312" y="326" class="thumbText">#20 outro_v3.mov</text>
+    </g>
+
+    <rect x="20" y="648" width="428" height="34" rx="9" fill="#edf4fc"/>
+    <text x="34" y="670" class="caption">Status: 420 clips loaded, 28 previews pending generation</text>
+  </g>
+
+  <g transform="translate(566,216)" filter="url(#shadow)">
+    <rect width="468" height="700" rx="16" fill="#ffffff"/>
+    <rect width="468" height="66" rx="16" fill="url(#panelTop)"/>
+    <text x="20" y="40" class="panelTitle">Instance B</text>
+    <text x="359" y="40" class="meta">Projection wall</text>
+
+    <rect x="20" y="84" width="428" height="56" rx="10" fill="#f4f8fd" stroke="#d9e3ef"/>
+    <rect x="30" y="96" width="190" height="14" rx="7" fill="#dce8f8"/>
+    <rect x="30" y="118" width="132" height="12" rx="6" fill="#dce8f8"/>
+    <rect x="334" y="96" width="104" height="32" rx="8" fill="#e8f1ff"/>
+    <text x="351" y="116" class="control">Refresh</text>
+
+    <g transform="translate(20,156)">
+      <rect x="0" y="0" width="132" height="100" rx="9" fill="#395c86"/>
+      <rect x="148" y="0" width="132" height="100" rx="9" fill="#295077"/>
+      <rect x="296" y="0" width="132" height="100" rx="9" fill="#46719f"/>
+      <text x="16" y="90" class="thumbText">#03 city_v4.mov</text>
+      <text x="164" y="90" class="thumbText">#04 burst.mov</text>
+      <text x="312" y="90" class="thumbText">#05 fog_loop.mov</text>
+
+      <rect x="0" y="118" width="132" height="100" rx="9" fill="#2f537b"/>
+      <rect x="148" y="118" width="132" height="100" rx="9" fill="#3d6694"/>
+      <rect x="296" y="118" width="132" height="100" rx="9" fill="#294e74"/>
+      <text x="16" y="208" class="thumbText">#06 lines.mov</text>
+      <text x="164" y="208" class="thumbText">#07 flare_v2.mov</text>
+      <text x="312" y="208" class="thumbText">#08 type_in.mov</text>
+
+      <rect x="0" y="236" width="132" height="100" rx="9" fill="#406b99"/>
+      <rect x="148" y="236" width="132" height="100" rx="9" fill="#2f547d"/>
+      <rect x="296" y="236" width="132" height="100" rx="9" fill="#22486f"/>
+      <text x="16" y="326" class="thumbText">#09 noise.mov</text>
+      <text x="164" y="326" class="thumbText">#10 tunnel.mov</text>
+      <text x="312" y="326" class="thumbText">#11 swap_v3.mov</text>
+    </g>
+
+    <rect x="20" y="648" width="428" height="34" rx="9" fill="#edf4fc"/>
+    <text x="34" y="670" class="caption">Status: 398 clips loaded, latest versions auto-selected</text>
+  </g>
+
+  <g transform="translate(1068,216)" filter="url(#shadow)">
+    <rect width="468" height="700" rx="16" fill="#ffffff"/>
+    <rect width="468" height="66" rx="16" fill="url(#panelTop)"/>
+    <text x="20" y="40" class="panelTitle">Instance C</text>
+    <text x="366" y="40" class="meta">LED ribbon</text>
+
+    <rect x="20" y="84" width="428" height="56" rx="10" fill="#f4f8fd" stroke="#d9e3ef"/>
+    <rect x="30" y="96" width="168" height="14" rx="7" fill="#dce8f8"/>
+    <rect x="30" y="118" width="140" height="12" rx="6" fill="#dce8f8"/>
+    <rect x="334" y="96" width="104" height="32" rx="8" fill="#e8f1ff"/>
+    <text x="351" y="116" class="control">Refresh</text>
+
+    <g transform="translate(20,156)">
+      <rect x="0" y="0" width="132" height="100" rx="9" fill="#274b70"/>
+      <rect x="148" y="0" width="132" height="100" rx="9" fill="#3b638f"/>
+      <rect x="296" y="0" width="132" height="100" rx="9" fill="#2a547f"/>
+      <text x="16" y="90" class="thumbText">#21 beam_v2.mov</text>
+      <text x="164" y="90" class="thumbText">#22 sparks.mov</text>
+      <text x="312" y="90" class="thumbText">#23 wave.mov</text>
+
+      <rect x="0" y="118" width="132" height="100" rx="9" fill="#406894"/>
+      <rect x="148" y="118" width="132" height="100" rx="9" fill="#234d77"/>
+      <rect x="296" y="118" width="132" height="100" rx="9" fill="#315780"/>
+      <text x="16" y="208" class="thumbText">#24 stripe.mov</text>
+      <text x="164" y="208" class="thumbText">#25 flow_v4.mov</text>
+      <text x="312" y="208" class="thumbText">#26 strobe.mov</text>
+
+      <rect x="0" y="236" width="132" height="100" rx="9" fill="#2b5078"/>
+      <rect x="148" y="236" width="132" height="100" rx="9" fill="#49709c"/>
+      <rect x="296" y="236" width="132" height="100" rx="9" fill="#2a4a6c"/>
+      <text x="16" y="326" class="thumbText">#27 noise_v3.mov</text>
+      <text x="164" y="326" class="thumbText">#28 ring.mov</text>
+      <text x="312" y="326" class="thumbText">#29 pulse.mov</text>
+    </g>
+
+    <rect x="20" y="648" width="428" height="34" rx="9" fill="#edf4fc"/>
+    <text x="34" y="670" class="caption">Status: 412 clips loaded, OSC path mode enabled</text>
+  </g>
+</svg>

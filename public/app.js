@@ -199,7 +199,7 @@ function createCard(video, delayMs) {
     const port = Number(portInput.value);
     const address = addressInput.value.trim();
     const useFilePath = Boolean(sendPathAsOscInput.checked);
-    const relativePath = String(video.relativePath || "").trim();
+    const relativePath = String((useFilePath ? (video.baseRelativePath || video.relativePath) : video.relativePath) || "").trim();
 
     if (!ip || Number.isNaN(port) || !address) {
       setStatus("Set OSC IP, port, and address first.", true);
