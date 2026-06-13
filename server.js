@@ -5,7 +5,6 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 const dgram = require("dgram");
 const ffmpegPath = require("ffmpeg-static");
-const osc = require("osc");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -222,6 +221,36 @@ function runFfmpeg(args) {
   });
 }
 
+function encodeOscStringUtf8(value) {
+  const body = Buffer.from(String(value), "utf8");
+  const lengthWithNull = body.length + 1;
+  const padding = (4 - (lengthWithNull % 4)) % 4;
+  return Buffer.concat([body, Buffer.alloc(1 + padding)]);
+}
+
+function buildOscPacket({ address, arg }) {
+  const normalizedAddress = String(address || "");
+  if (!normalizedAddress.startsWith("/")) {
+    throw new Error("OSC address must start with '/'");
+  }
+
+  const typeTag = arg.type === "i" ? ",i" : ",s";
+  const addressBytes = encodeOscStringUtf8(normalizedAddress);
+  const typeTagBytes = encodeOscStringUtf8(typeTag);
+
+  let argBytes;
+  if (arg.type === "i") {
+    argBytes = Buffer.alloc(4);
+    argBytes.writeInt32BE(Number(arg.value) || 0, 0);
+  } else if (arg.type === "s") {
+    argBytes = encodeOscStringUtf8(arg.value);
+  } else {
+    throw new Error(`Unsupported OSC argument type: ${arg.type}`);
+  }
+
+  return Buffer.concat([addressBytes, typeTagBytes, argBytes]);
+}
+
 async function ensurePreviewArtifacts(videoPath, stats, options = {}) {
   const { generateGif = true } = options;
   const artifacts = getPreviewArtifacts(videoPath, stats);
@@ -400,10 +429,7 @@ app.post("/api/send-osc", async (req, res) => {
       return res.status(400).json({ error: "ip, port, and address are required" });
     }
 
-    const packet = osc.writePacket({
-      address,
-      args: [arg],
-    });
+    const packet = buildOscPacket({ address, arg });
 
     await new Promise((resolve, reject) => {
       const socket = dgram.createSocket("udp4");
