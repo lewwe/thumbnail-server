@@ -203,6 +203,7 @@ app.post("/api/videos", async (req, res) => {
         index,
         fileName: path.basename(videoPath),
         fullPath: videoPath,
+        relativePath: path.relative(folderPath, videoPath).split(path.sep).join("/"),
         thumbUrl: previews.thumbUrl,
         gifUrl: previews.gifUrl,
         previewError: previews.previewError,
@@ -226,15 +227,34 @@ app.post("/api/send-osc", async (req, res) => {
     const ip = String(req.body.ip || "").trim();
     const address = String(req.body.address || "").trim();
     const port = Number(req.body.port);
-    const index = Number(req.body.index);
+    const useFilePath = Boolean(req.body.useFilePath);
 
-    if (!ip || !address || Number.isNaN(port) || Number.isNaN(index)) {
-      return res.status(400).json({ error: "ip, port, address, and index are required" });
+    let arg;
+    let sentValue;
+
+    if (useFilePath) {
+      const filePath = String(req.body.filePath || "").trim();
+      if (!filePath) {
+        return res.status(400).json({ error: "filePath is required when useFilePath is enabled" });
+      }
+      arg = { type: "s", value: filePath };
+      sentValue = filePath;
+    } else {
+      const index = Number(req.body.index);
+      if (Number.isNaN(index)) {
+        return res.status(400).json({ error: "index is required when useFilePath is disabled" });
+      }
+      arg = { type: "i", value: index };
+      sentValue = index;
+    }
+
+    if (!ip || !address || Number.isNaN(port)) {
+      return res.status(400).json({ error: "ip, port, and address are required" });
     }
 
     const packet = osc.writePacket({
       address,
-      args: [{ type: "i", value: index }],
+      args: [arg],
     });
 
     await new Promise((resolve, reject) => {
@@ -253,7 +273,7 @@ app.post("/api/send-osc", async (req, res) => {
       });
     });
 
-    return res.json({ sent: true, address, index, ip, port });
+    return res.json({ sent: true, address, value: sentValue, valueType: arg.type, ip, port });
   } catch (error) {
     return res.status(500).json({ error: error.message || "Failed to send OSC" });
   }

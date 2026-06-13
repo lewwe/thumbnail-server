@@ -3,6 +3,7 @@ const ipInput = document.getElementById("oscIp");
 const portInput = document.getElementById("oscPort");
 const addressInput = document.getElementById("oscAddress");
 const recursiveInput = document.getElementById("recursiveScan");
+const sendPathAsOscInput = document.getElementById("sendPathAsOsc");
 const browseBtn = document.getElementById("browseBtn");
 const browserPanel = document.getElementById("browserPanel");
 const browserCurrentPathEl = document.getElementById("browserCurrentPath");
@@ -39,6 +40,7 @@ function saveUiState() {
         oscPort: portInput.value,
         oscAddress: addressInput.value,
         recursiveScan: recursiveInput.checked,
+        sendPathAsOsc: sendPathAsOscInput.checked,
       }),
     );
   } catch (error) {
@@ -67,6 +69,9 @@ function restoreUiState() {
     }
     if (typeof state.recursiveScan === "boolean") {
       recursiveInput.checked = state.recursiveScan;
+    }
+    if (typeof state.sendPathAsOsc === "boolean") {
+      sendPathAsOscInput.checked = state.sendPathAsOsc;
     }
   } catch (error) {
     // Ignore malformed stored data.
@@ -104,22 +109,37 @@ function createCard(video, delayMs) {
     const ip = ipInput.value.trim();
     const port = Number(portInput.value);
     const address = addressInput.value.trim();
+    const useFilePath = Boolean(sendPathAsOscInput.checked);
+    const relativePath = String(video.relativePath || "").trim();
 
     if (!ip || Number.isNaN(port) || !address) {
       setStatus("Set OSC IP, port, and address first.", true);
       return;
     }
 
+    if (useFilePath && !relativePath) {
+      setStatus("Missing relative file path for OSC payload.", true);
+      return;
+    }
+
+    const requestBody = {
+      ip,
+      port,
+      address,
+      useFilePath,
+    };
+
+    if (useFilePath) {
+      requestBody.filePath = relativePath;
+    } else {
+      requestBody.index = video.index;
+    }
+
     try {
       const response = await fetch("/api/send-osc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ip,
-          port,
-          address,
-          index: video.index,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -127,7 +147,11 @@ function createCard(video, delayMs) {
         throw new Error(data.error || "Failed to send OSC");
       }
 
-      setStatus(`Sent OSC ${address} with index ${video.index} to ${ip}:${port}`);
+      if (useFilePath) {
+        setStatus(`Sent OSC ${address} with path ${relativePath} to ${ip}:${port}`);
+      } else {
+        setStatus(`Sent OSC ${address} with index ${video.index} to ${ip}:${port}`);
+      }
     } catch (error) {
       setStatus(error.message, true);
     }
@@ -238,6 +262,7 @@ closeBrowserBtn.addEventListener("click", closeBrowser);
   input.addEventListener("input", saveUiState);
 });
 recursiveInput.addEventListener("change", saveUiState);
+sendPathAsOscInput.addEventListener("change", saveUiState);
 
 browserUpBtn.addEventListener("click", () => {
   if (browseState.canGoUp) {
