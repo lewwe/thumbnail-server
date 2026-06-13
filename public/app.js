@@ -16,6 +16,9 @@ const statusEl = document.getElementById("status");
 const gridEl = document.getElementById("grid");
 
 const STORAGE_KEY = "thumbnailServer.uiState.v1";
+const RENDER_CHUNK_SIZE = 80;
+const MAX_ANIMATION_STAGGER_MS = 700;
+const previewRequestCache = new Map();
 
 const PLACEHOLDER_PREVIEW =
   "data:image/svg+xml;utf8," +
@@ -83,13 +86,55 @@ function setStatus(message, isError = false) {
   statusEl.style.color = isError ? "#9f2c1f" : "#1c1e1f";
 }
 
+function nextAnimationFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+async function ensurePreview(video, options = {}) {
+  const { generateGif = false } = options;
+  const requestKey = `${video.fullPath}:${generateGif ? "gif" : "thumb"}`;
+  const existingRequest = previewRequestCache.get(requestKey);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = (async () => {
+    const response = await fetch("/api/previews/ensure", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoPath: video.fullPath, generateGif }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to generate preview");
+    }
+    if (data.thumbUrl) {
+      video.thumbUrl = data.thumbUrl;
+      video.thumbReady = true;
+    }
+    if (data.gifUrl) {
+      video.gifUrl = data.gifUrl;
+      video.gifReady = true;
+    }
+    return data;
+  })().finally(() => {
+    previewRequestCache.delete(requestKey);
+  });
+
+  previewRequestCache.set(requestKey, request);
+  return request;
+}
+
 function createCard(video, delayMs) {
   const card = document.createElement("article");
   card.className = `card${video.isBroken ? " broken" : ""}`;
   card.style.animationDelay = `${delayMs}ms`;
-  const hasPreview = Boolean(video.thumbUrl) && !video.isBroken;
-  const thumbSrc = hasPreview ? video.thumbUrl : PLACEHOLDER_PREVIEW;
-  const gifSrc = video.isBroken ? thumbSrc : (video.gifUrl || thumbSrc);
+  const hasThumb = Boolean(video.thumbUrl) && !video.isBroken;
+  const hasGif = Boolean(video.gifUrl) && !video.isBroken;
+  const thumbSrc = hasThumb ? video.thumbUrl : PLACEHOLDER_PREVIEW;
+  const gifSrc = hasGif ? video.gifUrl : thumbSrc;
   const warningText = video.isBroken ? "Broken video" : "Preview unavailable";
 
   card.innerHTML = `
@@ -101,9 +146,53 @@ function createCard(video, delayMs) {
     <div class="meta">
       <span class="index">#${video.index}</span>
       <div class="name">${video.fileName}</div>
-      ${hasPreview ? "" : `<div class="preview-warning">${warningText}</div>`}
+      ${hasThumb ? "" : `<div class="preview-warning">${warningText}</div>`}
     </div>
   `;
+
+  const previewEl = card.querySelector(".preview");
+  const thumbEl = card.querySelector(".thumb");
+  const gifEl = card.querySelector(".gif");
+  const warningEl = card.querySelector(".preview-warning");
+
+  const refreshPreviewState = () => {
+    if (video.thumbUrl) {
+      thumbEl.src = video.thumbUrl;
+      if (!video.gifUrl) {
+        gifEl.src = video.thumbUrl;
+      }
+    }
+    if (video.gifUrl) {
+      gifEl.src = video.gifUrl;
+    }
+    if (video.thumbUrl && warningEl) {
+      warningEl.remove();
+    }
+  };
+
+  card.requestVisiblePreview = async () => {
+    if (video.isBroken || video.thumbUrl) {
+      return;
+    }
+    try {
+      await ensurePreview(video, { generateGif: false });
+      refreshPreviewState();
+    } catch (_error) {
+      // Ignore item-level preview errors so one bad file does not break the grid.
+    }
+  };
+
+  previewEl.addEventListener("mouseenter", async () => {
+    if (video.isBroken || video.gifUrl) {
+      return;
+    }
+    try {
+      await ensurePreview(video, { generateGif: true });
+      refreshPreviewState();
+    } catch (_error) {
+      // Ignore hover preview failures and keep static thumbnail/placeholder.
+    }
+  });
 
   card.addEventListener("click", async () => {
     const ip = ipInput.value.trim();
@@ -158,6 +247,39 @@ function createCard(video, delayMs) {
   });
 
   return card;
+}
+
+const visiblePreviewObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) {
+        return;
+      }
+      const card = entry.target;
+      visiblePreviewObserver.unobserve(card);
+      if (typeof card.requestVisiblePreview === "function") {
+        card.requestVisiblePreview();
+      }
+    });
+  },
+  { rootMargin: "300px" },
+);
+
+async function renderVideoCards(videos) {
+  for (let start = 0; start < videos.length; start += RENDER_CHUNK_SIZE) {
+    const end = Math.min(start + RENDER_CHUNK_SIZE, videos.length);
+    const fragment = document.createDocumentFragment();
+
+    for (let idx = start; idx < end; idx += 1) {
+      const stagger = Math.min(idx * 16, MAX_ANIMATION_STAGGER_MS);
+      const card = createCard(videos[idx], stagger);
+      fragment.appendChild(card);
+      visiblePreviewObserver.observe(card);
+    }
+
+    gridEl.appendChild(fragment);
+    await nextAnimationFrame();
+  }
 }
 
 async function browsePath(targetPath) {
@@ -235,14 +357,16 @@ async function loadVideos() {
       return;
     }
 
-    data.videos.forEach((video, idx) => {
-      gridEl.appendChild(createCard(video, idx * 35));
-    });
+    await renderVideoCards(data.videos);
 
     if (data.previewFailedCount > 0) {
       setStatus(
         `Loaded ${data.count} videos${recursive ? " (recursive)" : ""}. ${data.previewFailedCount} file(s) could not be previewed.`,
         true,
+      );
+    } else if (data.previewPendingCount > 0) {
+      setStatus(
+        `Loaded ${data.count} videos${recursive ? " (recursive)" : ""}. ${data.previewPendingCount} preview(s) will generate as you scroll/hover.`,
       );
     } else {
       setStatus(`Loaded ${data.count} videos${recursive ? " (recursive)" : ""}. Hover thumbnails to preview, click to send OSC.`);
