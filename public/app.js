@@ -49,8 +49,8 @@ function createDefaultSettings(layerId = 1) {
     oscIp: "",
     oscPort: "",
     oscAddress: `/d3/videoselect/${layerId}`,
-    recursiveScan: false,
-    sendPathAsOsc: false,
+    recursiveScan: true,
+    sendPathAsOsc: true,
     asciiSafeOscPath: false,
     viewMode: "all",
   };
