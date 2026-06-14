@@ -109,6 +109,28 @@ function syncActiveInstanceState() {
   state.statusIsError = statusEl.dataset.error === "true";
 }
 
+function replicateLayer1SharedFields() {
+  if (activeInstanceId !== 1) {
+    return;
+  }
+
+  const layer1 = instanceStates[0];
+  if (!layer1 || !layer1.settings) {
+    return;
+  }
+
+  const { folderPath, oscIp, oscPort } = layer1.settings;
+  for (let idx = 1; idx < instanceStates.length; idx += 1) {
+    const state = instanceStates[idx];
+    state.settings = {
+      ...state.settings,
+      folderPath,
+      oscIp,
+      oscPort,
+    };
+  }
+}
+
 function updateInstanceButtons() {
   instanceButtons.forEach((button) => {
     const buttonInstanceId = Number(button.dataset.instanceId);
@@ -271,6 +293,7 @@ function handleGridKeyboardNavigation(event) {
 function saveUiState() {
   try {
     syncActiveInstanceState();
+    replicateLayer1SharedFields();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
