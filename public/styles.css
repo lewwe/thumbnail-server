@@ -222,6 +222,12 @@ button:hover {
   transform: translateY(10px);
   opacity: 0;
   animation: rise 300ms ease forwards;
+  outline: none;
+}
+
+.card:focus,
+.card:focus-visible {
+  outline: none;
 }
 
 .card.keyboard-active .preview {
@@ -243,6 +249,10 @@ button:hover {
 
 .card.last-sent .preview {
   box-shadow: inset 0 0 0 3px #bf3b2b;
+}
+
+.card.last-sent.keyboard-active .preview {
+  box-shadow: inset 0 0 0 3px #bf3b2b, inset 0 0 0 6px #2f9e44;
 }
 
 .preview img {
