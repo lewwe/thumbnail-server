@@ -19,6 +19,7 @@ const gridEl = document.getElementById("grid");
 const STORAGE_KEY = "thumbnailServer.uiState.v1";
 const RENDER_CHUNK_SIZE = 80;
 const MAX_ANIMATION_STAGGER_MS = 700;
+const PAGE_NAVIGATION_STEP = 8;
 const previewRequestCache = new Map();
 
 const PLACEHOLDER_PREVIEW =
@@ -35,6 +36,126 @@ let browseState = {
 };
 
 let lastLoadedVideos = [];
+let lastSentVideoPath = null;
+
+function isTypingTarget(target) {
+  if (!target) {
+    return false;
+  }
+  const tag = String(target.tagName || "").toUpperCase();
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+}
+
+function getNavigableCards() {
+  return Array.from(gridEl.querySelectorAll(".card")).filter((card) => card.offsetParent !== null);
+}
+
+function markKeyboardActiveCard(card) {
+  gridEl.querySelectorAll(".card.keyboard-active").forEach((el) => {
+    el.classList.remove("keyboard-active");
+    el.tabIndex = -1;
+  });
+
+  if (!card) {
+    return;
+  }
+
+  card.classList.add("keyboard-active");
+  card.tabIndex = 0;
+}
+
+function focusCard(card, options = {}) {
+  const { scroll = true } = options;
+  if (!card) {
+    return;
+  }
+  markKeyboardActiveCard(card);
+  card.focus({ preventScroll: true });
+  if (scroll) {
+    card.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+}
+
+function restoreKeyboardCardAfterRender() {
+  const cards = getNavigableCards();
+  if (!cards.length) {
+    return;
+  }
+
+  const preferred = lastSentVideoPath
+    ? cards.find((card) => card.dataset.videoPath === lastSentVideoPath)
+    : null;
+  markKeyboardActiveCard(preferred || cards[0]);
+}
+
+function getCurrentKeyboardCard() {
+  const focusedCard = document.activeElement && document.activeElement.classList.contains("card")
+    ? document.activeElement
+    : null;
+  if (focusedCard) {
+    return focusedCard;
+  }
+  return gridEl.querySelector(".card.keyboard-active");
+}
+
+function handleGridKeyboardNavigation(event) {
+  if (isTypingTarget(event.target)) {
+    return;
+  }
+
+  const cards = getNavigableCards();
+  if (!cards.length) {
+    return;
+  }
+
+  const key = event.key;
+  const current = getCurrentKeyboardCard() || cards[0];
+  let index = cards.indexOf(current);
+  if (index < 0) {
+    index = 0;
+  }
+
+  if (key === "ArrowRight" || key === "ArrowDown") {
+    event.preventDefault();
+    focusCard(cards[Math.min(cards.length - 1, index + 1)]);
+    return;
+  }
+
+  if (key === "ArrowLeft" || key === "ArrowUp") {
+    event.preventDefault();
+    focusCard(cards[Math.max(0, index - 1)]);
+    return;
+  }
+
+  if (key === "Home") {
+    event.preventDefault();
+    focusCard(cards[0]);
+    return;
+  }
+
+  if (key === "End") {
+    event.preventDefault();
+    focusCard(cards[cards.length - 1]);
+    return;
+  }
+
+  if (key === "PageDown") {
+    event.preventDefault();
+    focusCard(cards[Math.min(cards.length - 1, index + PAGE_NAVIGATION_STEP)]);
+    return;
+  }
+
+  if (key === "PageUp") {
+    event.preventDefault();
+    focusCard(cards[Math.max(0, index - PAGE_NAVIGATION_STEP)]);
+    return;
+  }
+
+  if (key === " ") {
+    event.preventDefault();
+    current.click();
+  }
+}
 
 function saveUiState() {
   try {
@@ -163,6 +284,11 @@ async function ensurePreview(video, options = {}) {
 function createCard(video, delayMs) {
   const card = document.createElement("article");
   card.className = `card${video.isBroken ? " broken" : ""}`;
+  card.tabIndex = -1;
+  card.dataset.videoPath = video.fullPath;
+  if (video.fullPath === lastSentVideoPath) {
+    card.classList.add("last-sent");
+  }
   card.style.animationDelay = `${delayMs}ms`;
   const hasThumb = Boolean(video.thumbUrl) && !video.isBroken;
   const hasGif = Boolean(video.gifUrl) && !video.isBroken;
@@ -269,6 +395,13 @@ function createCard(video, delayMs) {
         throw new Error(data.error || "Failed to send OSC");
       }
 
+      document.querySelectorAll(".card.last-sent").forEach((el) => {
+        el.classList.remove("last-sent");
+      });
+      card.classList.add("last-sent");
+      lastSentVideoPath = video.fullPath;
+      markKeyboardActiveCard(card);
+
       if (useFilePath) {
         setStatus(`Sent OSC ${address} with path ${relativePath} to ${ip}:${port}`);
       } else {
@@ -277,6 +410,10 @@ function createCard(video, delayMs) {
     } catch (error) {
       setStatus(error.message, true);
     }
+  });
+
+  card.addEventListener("focus", () => {
+    markKeyboardActiveCard(card);
   });
 
   return card;
@@ -365,11 +502,13 @@ async function renderCurrentView() {
 
   if (!isFolderMode) {
     await renderVideoCards(lastLoadedVideos);
+    restoreKeyboardCardAfterRender();
     setStatus(`Showing all ${lastLoadedVideos.length} loaded videos.`);
     return;
   }
 
   const folderCount = await renderFolderSections(lastLoadedVideos);
+  restoreKeyboardCardAfterRender();
   setStatus(`Showing ${lastLoadedVideos.length} videos across ${folderCount} folders. Expand a folder to browse.`);
 }
 
@@ -487,6 +626,8 @@ viewModeInput.addEventListener("change", async () => {
     await renderCurrentView();
   }
 });
+
+document.addEventListener("keydown", handleGridKeyboardNavigation);
 
 browserUpBtn.addEventListener("click", () => {
   if (browseState.canGoUp) {
