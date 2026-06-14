@@ -172,13 +172,13 @@ async function switchInstance(nextInstanceId) {
 
   if (lastLoadedVideos.length > 0) {
     await renderCurrentView();
-    setStatus(state.statusMessage || `Switched to instance ${nextInstanceId}.`, state.statusIsError);
+    setStatus(state.statusMessage || `Switched to layer ${nextInstanceId}.`, state.statusIsError);
     return;
   }
 
   gridEl.innerHTML = "";
   gridEl.classList.toggle("folder-groups-mode", viewModeInput.value === "folder");
-  setStatus(state.statusMessage || `Switched to instance ${nextInstanceId}. Load videos for this instance.`);
+  setStatus(state.statusMessage || `Switched to layer ${nextInstanceId}. Load videos for this layer.`);
 }
 
 function restoreKeyboardCardAfterRender() {

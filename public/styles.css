@@ -174,10 +174,6 @@ button {
   padding: 0.45rem 0.6rem;
 }
 
-.folder-item::before {
-  content: "[DIR] ";
-}
-
 .browser-empty {
   color: #666d72;
   font-size: 0.9rem;
