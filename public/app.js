@@ -4,6 +4,7 @@ const portInput = document.getElementById("oscPort");
 const addressInput = document.getElementById("oscAddress");
 const recursiveInput = document.getElementById("recursiveScan");
 const sendPathAsOscInput = document.getElementById("sendPathAsOsc");
+const asciiSafeOscPathInput = document.getElementById("asciiSafeOscPath");
 const viewModeInput = document.getElementById("viewMode");
 const browseBtn = document.getElementById("browseBtn");
 const browserPanel = document.getElementById("browserPanel");
@@ -168,6 +169,7 @@ function saveUiState() {
         oscAddress: addressInput.value,
         recursiveScan: recursiveInput.checked,
         sendPathAsOsc: sendPathAsOscInput.checked,
+        asciiSafeOscPath: asciiSafeOscPathInput.checked,
         viewMode: viewModeInput.value,
       }),
     );
@@ -200,6 +202,9 @@ function restoreUiState() {
     }
     if (typeof state.sendPathAsOsc === "boolean") {
       sendPathAsOscInput.checked = state.sendPathAsOsc;
+    }
+    if (typeof state.asciiSafeOscPath === "boolean") {
+      asciiSafeOscPathInput.checked = state.asciiSafeOscPath;
     }
     if (typeof state.viewMode === "string") {
       viewModeInput.value = state.viewMode;
@@ -244,6 +249,13 @@ function groupVideosByFolder(videos) {
   return Array.from(groups.entries())
     .map(([folder, groupedVideos]) => ({ folder, videos: groupedVideos }))
     .sort((a, b) => a.folder.localeCompare(b.folder));
+}
+
+function toAsciiSafePath(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "_");
 }
 
 async function ensurePreview(video, options = {}) {
@@ -358,14 +370,16 @@ function createCard(video, delayMs) {
     const port = Number(portInput.value);
     const address = addressInput.value.trim();
     const useFilePath = Boolean(sendPathAsOscInput.checked);
+    const useAsciiSafePath = Boolean(asciiSafeOscPathInput.checked);
     const relativePath = String((useFilePath ? (video.baseRelativePath || video.relativePath) : video.relativePath) || "").trim();
+    const oscPath = useAsciiSafePath ? toAsciiSafePath(relativePath) : relativePath;
 
     if (!ip || Number.isNaN(port) || !address) {
       setStatus("Set OSC IP, port, and address first.", true);
       return;
     }
 
-    if (useFilePath && !relativePath) {
+    if (useFilePath && !oscPath) {
       setStatus("Missing relative file path for OSC payload.", true);
       return;
     }
@@ -378,7 +392,7 @@ function createCard(video, delayMs) {
     };
 
     if (useFilePath) {
-      requestBody.filePath = relativePath;
+      requestBody.filePath = oscPath;
     } else {
       requestBody.index = video.index;
     }
@@ -403,7 +417,7 @@ function createCard(video, delayMs) {
       markKeyboardActiveCard(card);
 
       if (useFilePath) {
-        setStatus(`Sent OSC ${address} with path ${relativePath} to ${ip}:${port}`);
+        setStatus(`Sent OSC ${address} with path ${oscPath} to ${ip}:${port}`);
       } else {
         setStatus(`Sent OSC ${address} with index ${video.index} to ${ip}:${port}`);
       }
@@ -620,6 +634,7 @@ closeBrowserBtn.addEventListener("click", closeBrowser);
 });
 recursiveInput.addEventListener("change", saveUiState);
 sendPathAsOscInput.addEventListener("change", saveUiState);
+asciiSafeOscPathInput.addEventListener("change", saveUiState);
 viewModeInput.addEventListener("change", async () => {
   saveUiState();
   if (lastLoadedVideos.length > 0) {

@@ -41,6 +41,10 @@
           <input id="sendPathAsOsc" type="checkbox" />
           Send filename/path instead of index
         </label>
+        <label class="check-row">
+          <input id="asciiSafeOscPath" type="checkbox" />
+          ASCII-safe path for OSC strings
+        </label>
         <label>
           Preview view:
           <select id="viewMode">
@@ -66,6 +70,7 @@
       <section class="legend" aria-label="Keyboard and color guide">
         <p><strong>Keys:</strong> Arrow keys move selection, Home/End jump start/end, PageUp/PageDown jump faster, Space sends OSC.</p>
         <p><strong>Colors:</strong> Green frame = current keyboard selection, Red frame = last preview that sent OSC.</p>
+        <p><strong>Path mode:</strong> Enable ASCII-safe path for OSC strings to replace diacritics/non-ASCII characters.</p>
       </section>
 
       <p id="status" class="status"></p>
