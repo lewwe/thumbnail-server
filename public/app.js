@@ -4,6 +4,7 @@ const portInput = document.getElementById("oscPort");
 const addressInput = document.getElementById("oscAddress");
 const recursiveInput = document.getElementById("recursiveScan");
 const sendPathAsOscInput = document.getElementById("sendPathAsOsc");
+const viewModeInput = document.getElementById("viewMode");
 const browseBtn = document.getElementById("browseBtn");
 const browserPanel = document.getElementById("browserPanel");
 const browserCurrentPathEl = document.getElementById("browserCurrentPath");
@@ -33,6 +34,8 @@ let browseState = {
   directories: [],
 };
 
+let lastLoadedVideos = [];
+
 function saveUiState() {
   try {
     localStorage.setItem(
@@ -44,6 +47,7 @@ function saveUiState() {
         oscAddress: addressInput.value,
         recursiveScan: recursiveInput.checked,
         sendPathAsOsc: sendPathAsOscInput.checked,
+        viewMode: viewModeInput.value,
       }),
     );
   } catch (error) {
@@ -76,6 +80,9 @@ function restoreUiState() {
     if (typeof state.sendPathAsOsc === "boolean") {
       sendPathAsOscInput.checked = state.sendPathAsOsc;
     }
+    if (typeof state.viewMode === "string") {
+      viewModeInput.value = state.viewMode;
+    }
   } catch (error) {
     // Ignore malformed stored data.
   }
@@ -90,6 +97,32 @@ function nextAnimationFrame() {
   return new Promise((resolve) => {
     requestAnimationFrame(() => resolve());
   });
+}
+
+function getVideoFolderKey(video) {
+  const relativePath = String(video.relativePath || "");
+  const slashIndex = relativePath.lastIndexOf("/");
+  if (slashIndex <= 0) {
+    return "/";
+  }
+  return relativePath.slice(0, slashIndex);
+}
+
+function groupVideosByFolder(videos) {
+  const groups = new Map();
+  videos.forEach((video) => {
+    const folderKey = getVideoFolderKey(video);
+    const existing = groups.get(folderKey);
+    if (existing) {
+      existing.push(video);
+      return;
+    }
+    groups.set(folderKey, [video]);
+  });
+
+  return Array.from(groups.entries())
+    .map(([folder, groupedVideos]) => ({ folder, videos: groupedVideos }))
+    .sort((a, b) => a.folder.localeCompare(b.folder));
 }
 
 async function ensurePreview(video, options = {}) {
@@ -265,7 +298,7 @@ const visiblePreviewObserver = new IntersectionObserver(
   { rootMargin: "300px" },
 );
 
-async function renderVideoCards(videos) {
+async function renderVideoCards(videos, targetEl = gridEl) {
   for (let start = 0; start < videos.length; start += RENDER_CHUNK_SIZE) {
     const end = Math.min(start + RENDER_CHUNK_SIZE, videos.length);
     const fragment = document.createDocumentFragment();
@@ -277,9 +310,67 @@ async function renderVideoCards(videos) {
       visiblePreviewObserver.observe(card);
     }
 
-    gridEl.appendChild(fragment);
+    targetEl.appendChild(fragment);
     await nextAnimationFrame();
   }
+}
+
+async function renderFolderSections(videos) {
+  const grouped = groupVideosByFolder(videos);
+  const sectionElements = [];
+
+  for (let index = 0; index < grouped.length; index += 1) {
+    const group = grouped[index];
+    const section = document.createElement("details");
+    section.className = "folder-section";
+    section.open = index === 0;
+
+    const summary = document.createElement("summary");
+    summary.className = "folder-summary";
+    summary.textContent = `Folder: ${group.folder} (${group.videos.length})`;
+
+    const folderGrid = document.createElement("div");
+    folderGrid.className = "folder-grid";
+
+    section.appendChild(summary);
+    section.appendChild(folderGrid);
+    gridEl.appendChild(section);
+    sectionElements.push(section);
+
+    section.addEventListener("toggle", () => {
+      if (!section.open) {
+        return;
+      }
+      sectionElements.forEach((otherSection) => {
+        if (otherSection !== section && otherSection.open) {
+          otherSection.open = false;
+        }
+      });
+    });
+
+    await renderVideoCards(group.videos, folderGrid);
+  }
+
+  return grouped.length;
+}
+
+async function renderCurrentView() {
+  gridEl.innerHTML = "";
+  if (!lastLoadedVideos.length) {
+    return;
+  }
+
+  const isFolderMode = viewModeInput.value === "folder";
+  gridEl.classList.toggle("folder-groups-mode", isFolderMode);
+
+  if (!isFolderMode) {
+    await renderVideoCards(lastLoadedVideos);
+    setStatus(`Showing all ${lastLoadedVideos.length} loaded videos.`);
+    return;
+  }
+
+  const folderCount = await renderFolderSections(lastLoadedVideos);
+  setStatus(`Showing ${lastLoadedVideos.length} videos across ${folderCount} folders. Expand a folder to browse.`);
 }
 
 async function browsePath(targetPath) {
@@ -353,11 +444,14 @@ async function loadVideos() {
     }
 
     if (!data.videos.length) {
+      lastLoadedVideos = [];
+      gridEl.classList.remove("folder-groups-mode");
       setStatus(recursive ? "No supported video files found in that folder tree." : "No supported video files found in that folder.");
       return;
     }
 
-    await renderVideoCards(data.videos);
+    lastLoadedVideos = data.videos;
+    await renderCurrentView();
 
     if (data.previewFailedCount > 0) {
       setStatus(
@@ -387,6 +481,12 @@ closeBrowserBtn.addEventListener("click", closeBrowser);
 });
 recursiveInput.addEventListener("change", saveUiState);
 sendPathAsOscInput.addEventListener("change", saveUiState);
+viewModeInput.addEventListener("change", async () => {
+  saveUiState();
+  if (lastLoadedVideos.length > 0) {
+    await renderCurrentView();
+  }
+});
 
 browserUpBtn.addEventListener("click", () => {
   if (browseState.canGoUp) {

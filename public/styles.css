@@ -68,6 +68,7 @@ label {
 }
 
 input,
+select,
 button {
   border: 1px solid #c5c1b7;
   border-radius: 8px;
@@ -92,6 +93,10 @@ button {
 
 .secondary:hover {
   filter: brightness(0.98);
+}
+
+.control-hidden {
+  display: none;
 }
 
 .browser-panel {
@@ -164,6 +169,34 @@ button:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.5rem;
+}
+
+.grid.folder-groups-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.folder-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.folder-summary {
+  cursor: pointer;
+  padding: 0.55rem 0.7rem;
+  font-weight: 700;
+  background: #f7f5ee;
+  user-select: none;
+}
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+  padding: 0.6rem;
 }
 
 .card {
