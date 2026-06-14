@@ -43,12 +43,12 @@ let instanceStates = createInstanceStates();
 let lastLoadedVideos = [];
 let lastSentVideoPath = null;
 
-function createDefaultSettings() {
+function createDefaultSettings(layerId = 1) {
   return {
     folderPath: "",
     oscIp: "",
     oscPort: "",
-    oscAddress: "/d3/videoselect",
+    oscAddress: `/d3/videoselect/${layerId}`,
     recursiveScan: false,
     sendPathAsOsc: false,
     asciiSafeOscPath: false,
@@ -59,7 +59,7 @@ function createDefaultSettings() {
 function createInstanceStates() {
   return Array.from({ length: INSTANCE_COUNT }, (_unused, index) => ({
     id: index + 1,
-    settings: createDefaultSettings(),
+    settings: createDefaultSettings(index + 1),
     videos: [],
     lastSentVideoPath: null,
     statusMessage: "",
@@ -84,8 +84,8 @@ function readSettingsFromInputs() {
   };
 }
 
-function applySettingsToInputs(settings) {
-  const merged = { ...createDefaultSettings(), ...(settings || {}) };
+function applySettingsToInputs(settings, layerId = activeInstanceId) {
+  const merged = { ...createDefaultSettings(layerId), ...(settings || {}) };
   folderInput.value = merged.folderPath;
   ipInput.value = merged.oscIp;
   portInput.value = merged.oscPort;
@@ -294,11 +294,11 @@ function restoreUiState() {
     const state = JSON.parse(raw);
     if (Array.isArray(state.instances)) {
       state.instances.slice(0, INSTANCE_COUNT).forEach((settings, index) => {
-        instanceStates[index].settings = { ...createDefaultSettings(), ...(settings || {}) };
+        instanceStates[index].settings = { ...createDefaultSettings(index + 1), ...(settings || {}) };
       });
     } else {
       instanceStates[0].settings = {
-        ...createDefaultSettings(),
+        ...createDefaultSettings(1),
         ...(state || {}),
       };
     }
