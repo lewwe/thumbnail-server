@@ -6,6 +6,7 @@ const recursiveInput = document.getElementById("recursiveScan");
 const sendPathAsOscInput = document.getElementById("sendPathAsOsc");
 const asciiSafeOscPathInput = document.getElementById("asciiSafeOscPath");
 const viewModeInput = document.getElementById("viewMode");
+const instanceButtons = Array.from(document.querySelectorAll(".instance-btn"));
 const browseBtn = document.getElementById("browseBtn");
 const browserPanel = document.getElementById("browserPanel");
 const browserCurrentPathEl = document.getElementById("browserCurrentPath");
@@ -21,6 +22,7 @@ const STORAGE_KEY = "thumbnailServer.uiState.v1";
 const RENDER_CHUNK_SIZE = 80;
 const MAX_ANIMATION_STAGGER_MS = 700;
 const PAGE_NAVIGATION_STEP = 8;
+const INSTANCE_COUNT = 4;
 const previewRequestCache = new Map();
 
 const PLACEHOLDER_PREVIEW =
@@ -36,8 +38,83 @@ let browseState = {
   directories: [],
 };
 
+let activeInstanceId = 1;
+let instanceStates = createInstanceStates();
 let lastLoadedVideos = [];
 let lastSentVideoPath = null;
+
+function createDefaultSettings() {
+  return {
+    folderPath: "",
+    oscIp: "",
+    oscPort: "",
+    oscAddress: "/d3/videoselect",
+    recursiveScan: false,
+    sendPathAsOsc: false,
+    asciiSafeOscPath: false,
+    viewMode: "all",
+  };
+}
+
+function createInstanceStates() {
+  return Array.from({ length: INSTANCE_COUNT }, (_unused, index) => ({
+    id: index + 1,
+    settings: createDefaultSettings(),
+    videos: [],
+    lastSentVideoPath: null,
+    statusMessage: "",
+    statusIsError: false,
+  }));
+}
+
+function getActiveInstanceState() {
+  return instanceStates[activeInstanceId - 1];
+}
+
+function readSettingsFromInputs() {
+  return {
+    folderPath: folderInput.value,
+    oscIp: ipInput.value,
+    oscPort: portInput.value,
+    oscAddress: addressInput.value,
+    recursiveScan: recursiveInput.checked,
+    sendPathAsOsc: sendPathAsOscInput.checked,
+    asciiSafeOscPath: asciiSafeOscPathInput.checked,
+    viewMode: viewModeInput.value,
+  };
+}
+
+function applySettingsToInputs(settings) {
+  const merged = { ...createDefaultSettings(), ...(settings || {}) };
+  folderInput.value = merged.folderPath;
+  ipInput.value = merged.oscIp;
+  portInput.value = merged.oscPort;
+  addressInput.value = merged.oscAddress;
+  recursiveInput.checked = Boolean(merged.recursiveScan);
+  sendPathAsOscInput.checked = Boolean(merged.sendPathAsOsc);
+  asciiSafeOscPathInput.checked = Boolean(merged.asciiSafeOscPath);
+  viewModeInput.value = merged.viewMode;
+}
+
+function syncActiveInstanceState() {
+  const state = getActiveInstanceState();
+  if (!state) {
+    return;
+  }
+
+  state.settings = readSettingsFromInputs();
+  state.videos = lastLoadedVideos;
+  state.lastSentVideoPath = lastSentVideoPath;
+  state.statusMessage = statusEl.textContent;
+  state.statusIsError = statusEl.dataset.error === "true";
+}
+
+function updateInstanceButtons() {
+  instanceButtons.forEach((button) => {
+    const buttonInstanceId = Number(button.dataset.instanceId);
+    button.classList.toggle("active", buttonInstanceId === activeInstanceId);
+  });
+}
 
 function isTypingTarget(target) {
   if (!target) {
@@ -75,6 +152,33 @@ function focusCard(card, options = {}) {
   if (scroll) {
     card.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
+}
+
+async function switchInstance(nextInstanceId) {
+  if (nextInstanceId === activeInstanceId) {
+    return;
+  }
+
+  syncActiveInstanceState();
+  activeInstanceId = nextInstanceId;
+
+  const state = getActiveInstanceState();
+  applySettingsToInputs(state.settings);
+  lastLoadedVideos = state.videos || [];
+  lastSentVideoPath = state.lastSentVideoPath || null;
+  closeBrowser();
+  updateInstanceButtons();
+  saveUiState();
+
+  if (lastLoadedVideos.length > 0) {
+    await renderCurrentView();
+    setStatus(state.statusMessage || `Switched to instance ${nextInstanceId}.`, state.statusIsError);
+    return;
+  }
+
+  gridEl.innerHTML = "";
+  gridEl.classList.toggle("folder-groups-mode", viewModeInput.value === "folder");
+  setStatus(state.statusMessage || `Switched to instance ${nextInstanceId}. Load videos for this instance.`);
 }
 
 function restoreKeyboardCardAfterRender() {
@@ -155,22 +259,23 @@ function handleGridKeyboardNavigation(event) {
   if (key === " ") {
     event.preventDefault();
     current.click();
+    return;
+  }
+
+  if (key === "b" || key === "B") {
+    event.preventDefault();
+    void sendNoneOscMessage();
   }
 }
 
 function saveUiState() {
   try {
+    syncActiveInstanceState();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        folderPath: folderInput.value,
-        oscIp: ipInput.value,
-        oscPort: portInput.value,
-        oscAddress: addressInput.value,
-        recursiveScan: recursiveInput.checked,
-        sendPathAsOsc: sendPathAsOscInput.checked,
-        asciiSafeOscPath: asciiSafeOscPathInput.checked,
-        viewMode: viewModeInput.value,
+        activeInstanceId,
+        instances: instanceStates.map((state) => state.settings),
       }),
     );
   } catch (error) {
@@ -182,41 +287,42 @@ function restoreUiState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
+      applySettingsToInputs(getActiveInstanceState().settings);
+      updateInstanceButtons();
       return;
     }
     const state = JSON.parse(raw);
-    if (typeof state.folderPath === "string") {
-      folderInput.value = state.folderPath;
+    if (Array.isArray(state.instances)) {
+      state.instances.slice(0, INSTANCE_COUNT).forEach((settings, index) => {
+        instanceStates[index].settings = { ...createDefaultSettings(), ...(settings || {}) };
+      });
+    } else {
+      instanceStates[0].settings = {
+        ...createDefaultSettings(),
+        ...(state || {}),
+      };
     }
-    if (typeof state.oscIp === "string") {
-      ipInput.value = state.oscIp;
+    if (Number.isInteger(state.activeInstanceId) && state.activeInstanceId >= 1 && state.activeInstanceId <= INSTANCE_COUNT) {
+      activeInstanceId = state.activeInstanceId;
     }
-    if (typeof state.oscPort === "string") {
-      portInput.value = state.oscPort;
-    }
-    if (typeof state.oscAddress === "string") {
-      addressInput.value = state.oscAddress;
-    }
-    if (typeof state.recursiveScan === "boolean") {
-      recursiveInput.checked = state.recursiveScan;
-    }
-    if (typeof state.sendPathAsOsc === "boolean") {
-      sendPathAsOscInput.checked = state.sendPathAsOsc;
-    }
-    if (typeof state.asciiSafeOscPath === "boolean") {
-      asciiSafeOscPathInput.checked = state.asciiSafeOscPath;
-    }
-    if (typeof state.viewMode === "string") {
-      viewModeInput.value = state.viewMode;
-    }
+    applySettingsToInputs(getActiveInstanceState().settings);
+    updateInstanceButtons();
   } catch (error) {
     // Ignore malformed stored data.
+    applySettingsToInputs(getActiveInstanceState().settings);
+    updateInstanceButtons();
   }
 }
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.style.color = isError ? "#9f2c1f" : "#1c1e1f";
+  statusEl.dataset.error = isError ? "true" : "false";
+  const state = getActiveInstanceState();
+  if (state) {
+    state.statusMessage = message;
+    state.statusIsError = isError;
+  }
 }
 
 function nextAnimationFrame() {
@@ -226,6 +332,10 @@ function nextAnimationFrame() {
 }
 
 function getVideoFolderKey(video) {
+  if (typeof video.relativeDir === "string" && video.relativeDir.trim()) {
+    return video.relativeDir;
+  }
+
   const relativePath = String(video.relativePath || "");
   const slashIndex = relativePath.lastIndexOf("/");
   if (slashIndex <= 0) {
@@ -256,6 +366,45 @@ function toAsciiSafePath(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E]/g, "_");
+}
+
+async function sendOscRequest(requestBody) {
+  const response = await fetch("/api/send-osc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to send OSC");
+  }
+
+  return data;
+}
+
+async function sendNoneOscMessage() {
+  const ip = ipInput.value.trim();
+  const port = Number(portInput.value);
+  const address = addressInput.value.trim();
+
+  if (!ip || Number.isNaN(port) || !address) {
+    setStatus("Set OSC IP, port, and address first.", true);
+    return;
+  }
+
+  try {
+    await sendOscRequest({
+      ip,
+      port,
+      address,
+      useFilePath: true,
+      filePath: "/none",
+    });
+    setStatus(`Sent OSC ${address} with path /none to ${ip}:${port}`);
+  } catch (error) {
+    setStatus(error.message, true);
+  }
 }
 
 async function ensurePreview(video, options = {}) {
@@ -398,22 +547,14 @@ function createCard(video, delayMs) {
     }
 
     try {
-      const response = await fetch("/api/send-osc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send OSC");
-      }
+      await sendOscRequest(requestBody);
 
       document.querySelectorAll(".card.last-sent").forEach((el) => {
         el.classList.remove("last-sent");
       });
       card.classList.add("last-sent");
       lastSentVideoPath = video.fullPath;
+      getActiveInstanceState().lastSentVideoPath = lastSentVideoPath;
       markKeyboardActiveCard(card);
 
       if (useFilePath) {
@@ -581,6 +722,8 @@ async function loadVideos() {
   }
 
   loadBtn.disabled = true;
+  lastSentVideoPath = null;
+  getActiveInstanceState().lastSentVideoPath = null;
   setStatus(recursive ? "Scanning folder tree and generating previews..." : "Scanning folder and generating previews...");
   gridEl.innerHTML = "";
 
@@ -598,12 +741,14 @@ async function loadVideos() {
 
     if (!data.videos.length) {
       lastLoadedVideos = [];
+      getActiveInstanceState().videos = [];
       gridEl.classList.remove("folder-groups-mode");
       setStatus(recursive ? "No supported video files found in that folder tree." : "No supported video files found in that folder.");
       return;
     }
 
     lastLoadedVideos = data.videos;
+    getActiveInstanceState().videos = lastLoadedVideos;
     await renderCurrentView();
 
     if (data.previewFailedCount > 0) {
@@ -628,6 +773,15 @@ async function loadVideos() {
 loadBtn.addEventListener("click", loadVideos);
 browseBtn.addEventListener("click", openBrowser);
 closeBrowserBtn.addEventListener("click", closeBrowser);
+instanceButtons.forEach((button) => {
+  button.addEventListener("click", async () => {
+    const nextInstanceId = Number(button.dataset.instanceId);
+    if (!Number.isInteger(nextInstanceId) || nextInstanceId < 1 || nextInstanceId > INSTANCE_COUNT) {
+      return;
+    }
+    await switchInstance(nextInstanceId);
+  });
+});
 
 [folderInput, ipInput, portInput, addressInput].forEach((input) => {
   input.addEventListener("input", saveUiState);

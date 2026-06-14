@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <aside class="instance-rail" aria-label="Instance selector">
+      <div class="instance-rail-label">Instances</div>
+      <button type="button" class="instance-btn" data-instance-id="1">1</button>
+      <button type="button" class="instance-btn" data-instance-id="2">2</button>
+      <button type="button" class="instance-btn" data-instance-id="3">3</button>
+      <button type="button" class="instance-btn" data-instance-id="4">4</button>
+    </aside>
     <main class="page">
       <header>
         <h1>Video Thumbnail OSC Browser</h1>
@@ -68,7 +75,8 @@
       </section>
 
       <section class="legend" aria-label="Keyboard and color guide">
-        <p><strong>Keys:</strong> Arrow keys move selection, Home/End jump start/end, PageUp/PageDown jump faster, Space sends OSC.</p>
+        <p><strong>Instances:</strong> Buttons 1-4 on the left switch between four saved preview/OSC setups.</p>
+        <p><strong>Keys:</strong> Arrow keys move selection, Home/End jump start/end, PageUp/PageDown jump faster, Space sends OSC, B sends /none.</p>
         <p><strong>Colors:</strong> Green frame = current keyboard selection, Red frame = last preview that sent OSC.</p>
         <p><strong>Path mode:</strong> Enable ASCII-safe path for OSC strings to replace diacritics/non-ASCII characters.</p>
       </section>

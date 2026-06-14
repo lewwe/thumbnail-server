@@ -21,10 +21,45 @@ body {
   color: var(--ink);
 }
 
+.instance-rail {
+  position: fixed;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+}
+
+.instance-rail-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5e6468;
+  text-align: center;
+}
+
+.instance-btn {
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+}
+
+.instance-btn.active {
+  background: #2a4458;
+}
+
 .page {
   max-width: 1680px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 1rem 1rem 5.5rem;
 }
 
 h1 {
@@ -302,7 +337,20 @@ button:hover {
 }
 
 @media (max-width: 700px) {
+  .instance-rail {
+    left: 0.6rem;
+    top: auto;
+    bottom: 0.75rem;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .instance-rail-label {
+    text-align: left;
+  }
+
   .page {
-    padding: 1rem;
+    padding: 1rem 1rem 5.75rem 1rem;
   }
 }
